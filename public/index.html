@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Spotify Account Playlist Generator</title>
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="default.css">
+	</head>
+	
+	<body>
+		<div class="container">
+		  <div id="login">
+			<h1>Welcome to the Spotify Playlist Generator</h1>
+			<p> This website allows you to create playlists from your Spotify account's saved track list. 
+			This list consists of any songs for which you have clicked the '+' sign next to its title (Save to Your Music).
+			</p>
+			<a href="/login" class="btn btn-primary">Log in with Spotify</a>
+		  </div>
+		  <div id="loggedin">
+			<div id="user-profile">
+			</div>
+			<div id="tracks-summary">
+			</div>
+		  </div>
+		</div>
+
+	<script id="user-profile-template" type="text/x-handlebars-template">
+      <div class="media">
+	    <div class="pull-left">
+          <img class="media-object" width="150" src="{{images.0.url}}" />
+        </div>
+        <div class="media-body">
+			<dl class="dl-horizontal">
+				<dt>Name</dt><dd>{{display_name}}</dd>
+				<dt>User Name</dt><dd>{{id}}</dd>
+				<dt>Account Type</dt><dd>{{toUpperCase product}}</dd>
+				<dt>Country</dt><dd>{{country}}</dd>
+				<dt>Spotify URI</dt><dd><a href="{{external_urls.spotify}}">{{external_urls.spotify}}</a></dd>
+			</dl>
+        </div>
+      </div>
+    </script>
+	
+	<script id="tracks-summary-template" type="text/x-handlebars-template">
+      <h3>Your Saved Tracks</h3>
+		<table class="table table-striped">		
+			<tr>
+				<th> Song Name </th>
+				<th> Artist </th>
+				<th> BPM </th>
+				<th> Danceability </th>
+				<th> Energy	</th>
+				<th> Instrumentalness </th>
+			</tr>
+			
+			{{#each items}}
+			<tr>
+				<td> {{this.track.name}} </td>
+				<td class="artist-names"> {{#each this.track.artists}} 
+					<span id="{{id}}" data-toggle="tooltip" title="test"> {{name}}{{#unless @last}},{{/unless}} </span>
+					 {{/each}} </td>
+				<td> {{this.audio_features.tempo}} </td>
+				<td> {{this.audio_features.danceability}} </td>
+				<td> {{this.audio_features.energy}} </td>
+				<td> {{this.audio_features.instrumentalness}} </td>
+			</tr>
+			{{/each}}
+		</table>
+    </script>
+	
+	<script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" 
+	integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src='script.js'></script>
+	
+	</body>
+</html>

@@ -1,0 +1,16 @@
+#login, #loggedin {
+   display: none;
+}
+
+dt, dd {
+	line-height: 1.7;
+	font-size: 16px;
+}
+
+.artist-names {
+	width: 300px;
+}
+
+.tooltip {
+	font-size: 14px;
+}
