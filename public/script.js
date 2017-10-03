@@ -31,23 +31,21 @@ var access_token = params.access_token,
 	refresh_token = params.refresh_token,
 	error = params.error;
 
-//	Object to return to Handlebars template for tracks summary
-var tracksData = { items: []};
-
-// String containing concatenation of songIDs, for GET request of audio features
-var songStrings;
-// String containing concatenation of artistIDs, for GET request of artists (for genre retrieval)
-var artistString;
-
-// Object holding genres of artist, key equals artist ID
-var artistGenres = {};
-
-var songCount = 0;						// Number of songs retrieved so far, used for offset 
+var tracksData = { items: []};	// For populating Handlebars template
+var songStrings;	// String of songIDs, for audio feature retrieval
+var artistString;	// String of artistIDs, for artists object retrieval
+var artistGenres = {};	// Genres of artists, keyed by artist ID
+var songCount = 0;		// Number of songs retrieved so far, used for offset 
+var keyConversion = {0: "C", 1: "C#", 2: "D", 3: "D#", 4: "E", 5: "F", 6: "F#",
+							  7: "G", 8: "G#", 9: "A", 10: "A#", 11: "B"};
 
 Handlebars.registerHelper("toUpperCase", function(str) {
 	return str.charAt(0).toUpperCase() + str.slice(1);
 });
 
+Handlebars.registerHelper("convertKey", function(num) {
+			return keyConversion[num];
+		});
 
 if (error) {
   alert('There was an error during the authentication');
@@ -64,11 +62,9 @@ if (error) {
 		  userProfilePlaceholder.innerHTML = userProfileTemplate(response);
 		  $('#login').hide();
 		  $('#loggedin').show();
+		  retrieveTrackData();		// Retrieve user's saved tracks
 		}
 	});
-	
-	// Retrieve user's saved tracks
-	retrieveTrackData();
 	
   } else {
   // render initial screen
@@ -79,106 +75,100 @@ if (error) {
 
 	
 function retrieveTrackData() {	
-		// Array holding list of song IDs	
-		var songIDs = [];
-		// Array holding list of artist IDs
-		var artistIDs = [];
-		// Array of GET requests for artist objects, for retrieving genre information
-		var artistRequests = [];
-		// Initialize strings to be empty
-		songStrings = "";
-		artistStrings = "";
-		// Send GET request to Spotify Web API for saved tracks
-		$.ajax({
-			url: 'https://api.spotify.com/v1/me/tracks',
-			headers: {
-			  'Authorization': 'Bearer ' + access_token
-			},
-			data: {
-				limit: 50,
-				offset: songCount
-			},
-			success: function(response) {
+	var songIDs = []; 		// List of song IDs	
+	var artistIDs = [];		// List of artist IDs
+	var artistRequests = [];	// GET requests for artist, for retrieving genre
+	songStrings = "";			// Initialize strings to be empty
+	artistStrings = "";
+	// Send GET request to Spotify Web API for saved tracks
+	$.ajax({
+		url: 'https://api.spotify.com/v1/me/tracks',
+		headers: {
+		  'Authorization': 'Bearer ' + access_token
+		},
+		data: {
+			limit: 50,
+			offset: songCount
+		},
+		success: function(response) {
+
+			// Iterate through all tracks returned in the response
+			for(var i = 0; i < response.items.length; i++) {
+				songIDs[i] = response.items[i].track.id;					// Add tracks IDs to songIDs array
+				tracksData.items[songCount + i] = response.items[i];		// Copy current set of tracks data
 				
-				// Iterate through all tracks returned in the response
-				for(var i = 0; i < response.items.length; i++) {
-					songIDs[i] = response.items[i].track.id;					// Add tracks IDs to songIDs array
-					tracksData.items[songCount + i] = response.items[i];		// Copy current set of tracks data
-					
-					// For each track, add all artist IDs to artistIDs array
-					for(var j = 0; j < response.items[i].track.artists.length; j++) {
-						artistIDs.push(response.items[i].track.artists[j].id)
-					}
-				}	
-				
-				// Concatenate song IDs
-				songStrings = "/?ids=" + songIDs.join();
+				// For each track, add all artist IDs to artistIDs array
+				for(var j = 0; j < response.items[i].track.artists.length; j++) {
+					artistIDs.push(response.items[i].track.artists[j].id);
+				}
+			}	
 			
-				// Split artist IDs into groups of 50
-				for (var i = 0; i < artistIDs.length;) {
-					
-					// If there are more than 50 tracks left to retrieve
-					if ((artistIDs.length) - i > 50) {
-						artistString = "?ids=" + artistIDs.slice(i, i+50).join();
-						i += 50;
-					// If less than 50 tracks to retrieve
-					} else {
-						artistString = "?ids=" + artistIDs.slice(i);
-						i = artistIDs.length;
-					}
-					
-					// Push GET request for artists onto artistRequests array
-					artistRequests.push(
-						$.ajax({
-							url: 'https://api.spotify.com/v1/artists/'+artistString,
-							headers: {
-								'Authorization': 'Bearer ' + access_token
-							}
-						}
-					));
+			songStrings = "/?ids=" + songIDs.join();		// Concatenate song IDs
+		
+			// Split artist IDs into groups of 50
+			for (var i = 0; i < artistIDs.length;) {
+				
+				// If there are more than 50 artists left to retrieve
+				if ((artistIDs.length) - i > 50) {
+					artistString = "?ids=" + artistIDs.slice(i, i+50).join();
+					i += 50;
+				// If less than 50 artists to retrieve
+				} else {
+					artistString = "?ids=" + artistIDs.slice(i);
+					i = artistIDs.length;
 				}
 				
-				// Get audio features for this set of tracks
-				var trackFeatures = $.ajax({
-						url: 'https://api.spotify.com/v1/audio-features'+songStrings,
+				// Push GET request for artists onto artistRequests array
+				artistRequests.push(
+					$.ajax({
+						url: 'https://api.spotify.com/v1/artists/'+artistString,
 						headers: {
-						  'Authorization': 'Bearer ' + access_token
-					}
-				});
-			
-				// When audio feature and artist requests are done			
-				$.when(trackFeatures, artistRequests).done(function() {					
-						
-					// Copy track features into tracksData object
-					for(var i = 0; i < response.items.length; i++) {
-						tracksData.items[songCount + i].audio_features = trackFeatures.responseJSON.audio_features[i];
-					}
-					
-					// Copy artist genres into artistGenres object, keyed by artist ID
-					for(var j = 0; j < artistRequests.length; j++) {
-						for (var k = 0; k < artistRequests[j].responseJSON.artists.length; k++) {
-							var tempID = artistRequests[j].responseJSON.artists[k].id;    
-							artistGenres[tempID] = artistRequests[j].responseJSON.artists[k].genres;
+							'Authorization': 'Bearer ' + access_token
 						}
 					}
-					songCount += response.items.length;			// Update song count
-					if (response.items.length == 50) {			// If there are more tracks to retrieve
-						retrieveTrackData();					// Call function again
-					} else {				
-						tracksSummaryPlaceholder.innerHTML = tracksSummaryTemplate(tracksData);		// Populate template with tracksData
-						var artistDivs = $(".artist-names").children();
-						$.each(artistDivs, function() {
-							var genreNames = artistGenres[this.id];
-							genreNames = genreNames.join("<br>");
-							this.title = genreNames;
-							});
-						$('[data-toggle="tooltip"]').tooltip({html:true});	
-					}
-				});
-					
+				));
 			}
-		});
-}
+			
+			// Get audio features for this set of tracks
+			var trackFeatures = $.ajax({
+					url: 'https://api.spotify.com/v1/audio-features'+songStrings,
+					headers: {
+					  'Authorization': 'Bearer ' + access_token
+				}
+			});
 		
+			// When audio feature and artist requests are done			
+			$.when(trackFeatures, ...artistRequests).done(function() {					
+					
+				// Copy track features into tracksData object
+				for(var i = 0; i < response.items.length; i++) {
+					tracksData.items[songCount + i].audio_features = trackFeatures.responseJSON.audio_features[i];
+				}
+				
+				// Copy artist genres into artistGenres object, keyed by artist ID
+				for(var j = 0; j < artistRequests.length; j++) {
+					for (var k = 0; k < artistRequests[j].responseJSON.artists.length; k++) {
+						var tempID = artistRequests[j].responseJSON.artists[k].id;    
+						artistGenres[tempID] = artistRequests[j].responseJSON.artists[k].genres;
+					}
+				}
+				songCount += response.items.length;			// Update song count
+				if (response.items.length == 50) {			// If there are more tracks to retrieve
+					retrieveTrackData();					// Call function again
+				} else {				
+					tracksSummaryPlaceholder.innerHTML = tracksSummaryTemplate(tracksData);		// Populate template with tracksData
+					var artistDivs = $(".artist-names").children();
+					$.each(artistDivs, function() {
+						var genreNames = artistGenres[this.id];
+						genreNames = genreNames.join("<br>");
+						this.title = genreNames;
+						});
+					$('[data-toggle="tooltip"]').tooltip({html:true});	
+				}
+			});
+				
+		}
+	});
+}
 
 

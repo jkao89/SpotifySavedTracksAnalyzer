@@ -4,9 +4,11 @@ var request = require('request'); // "Request" library
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 
-var client_id = 'efc8d8de714d4e7b931ab6efa6d8e510'; // Your client id
-var client_secret = 'b77ce17ebcf84dc882fdab7718f60f82'; // Your secret
+
+var client_id = '198e559227a84464bbf5c3cabfc5cf72'; // Your client id
+var client_secret = '17a3295ac8fa4a2ca959fac9b1086b6b'; // Your secret
 var redirect_uri = 'http://localhost:8888/callback/'; // Your redirect uri
+
 
 /**
  * Generates a random string containing numbers and letters
